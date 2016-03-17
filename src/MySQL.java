@@ -1,10 +1,9 @@
-import java.sql.*;
-import java.util.Date;
-import java.util.StringJoiner;
-
 /**
  * Created by joey on 16-3-14.
  */
+import java.sql.*;
+import java.util.Date;
+
 public class MySQL {
     protected static Connection conn = null;
     protected static Statement stmt = null;
@@ -30,16 +29,18 @@ public class MySQL {
             ResultSet rs = stmt.executeQuery(sql);
             rs.next();
             return rs.getString("id");
-        } catch (SQLException e) {
-            System.out.println("MySQL OPERATION ERROR...");
-            e.printStackTrace();
+        } catch (SQLException sqle) {
+            sqle.printStackTrace();
+            System.out.println("ERROR: MySQL.addBoard");
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("ERROR: MySQL.addBoard");
         } finally {
             try {
                 conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
+            } catch (SQLException sqle) {
+                sqle.printStackTrace();
+                System.out.println("ERROR: MySQL.addBoard");
             }
         }
         return null;
@@ -52,21 +53,23 @@ public class MySQL {
             String time = String.format("%tF %tT", date, date);
             String sql = String.format("INSERT INTO private_board_member(board_id,user_id,add_time) VALUES('%s','%s','%s')", boardId,userId,time);
             stmt.executeUpdate(sql);
-        } catch (SQLException e) {
-            System.out.println("MySQL OPERATION ERROR...");
-            e.printStackTrace();
+        } catch (SQLException sqle) {
+            sqle.printStackTrace();
+            System.out.println("ERROR: MySQL.addPrivateMember");
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("ERROR: MySQL.addPrivateMember");
         } finally {
             try {
                 conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
+            } catch (SQLException sqle) {
+                sqle.printStackTrace();
+                System.out.println("ERROR: MySQL.addPrivateMember");
             }
         }
     }
 
-    public static String uploadImage(String userId, String imageName, String title, int width, int height, int imageGrade) {
+    public static String addImage(String userId, String imageName, String title, int width, int height, int imageGrade) {
         try {
             connect();
             Date date = new Date();
@@ -78,16 +81,18 @@ public class MySQL {
             ResultSet rs = stmt.executeQuery(sql);
             rs.next();
             return rs.getString("id");
-        } catch (SQLException e) {
-            System.out.println("MySQL OPERATION ERROR...");
-            e.printStackTrace();
+        } catch (SQLException sqle) {
+            sqle.printStackTrace();
+            System.out.println("ERROR: MySQL.addImage");
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("ERROR: MySQL.addImage");
         } finally {
             try {
                 conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
+            } catch (SQLException sqle) {
+                sqle.printStackTrace();
+                System.out.println("ERROR: MySQL.addImage");
             }
         }
         return null;
@@ -100,16 +105,18 @@ public class MySQL {
             String time = String.format("%tF %tT", date, date);
             String sql = String.format("INSERT INTO board_has_image(board_id,image_id,add_time) VALUES('%s','%s','%s')", boardId,imageId,time);
             stmt.executeUpdate(sql);
-        } catch (SQLException e) {
-            System.out.println("MySQL OPERATION ERROR...");
-            e.printStackTrace();
+        } catch (SQLException sqle) {
+            sqle.printStackTrace();
+            System.out.println("ERROR: MySQL.addBoardImage");
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("ERROR: MySQL.addBoardImage");
         } finally {
             try {
                 conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
+            } catch (SQLException sqle) {
+                sqle.printStackTrace();
+                System.out.println("ERROR: MySQL.addBoardImage");
             }
         }
     }

@@ -8,301 +8,258 @@ import java.io.*;
 import java.nio.channels.FileChannel;
 
 /**
- * Created by joey on 16-3-14.
+ * Created by joey on 16-3-16.
  */
 public class Picture {
-    // The file object of the picture file
-    private File pictureFile;
-    private File tmpFile;
-    // The Image object of the picture file
+    /** The path of the tmp directory */
+    protected static final String PICTURE_TMP_DIR = "/app-data/ljy/tmp/";
+    //protected static final String PICTURE_TMP_DIR = "/home/joey/tmp/";
+
+    /** The path of the data directory */
+    protected static final String PICTURE_DATA_DIR = "/app-data/ljy/data/";
+    //protected static final String PICTURE_DATA_DIR = "/home/joey/data/";
+
+    private String jpgTargetUrl = PICTURE_DATA_DIR + "jpg/";
+    private String dziTargetUrl = PICTURE_DATA_DIR + "dzi/";
+
+    /** The prefix name of the preview picture */
+    private String PICTURE_PREVIEW_PREFIX = "preview_";
+
+    /** The file object of the original picture file */
+    private File originalPictureFile;
+
+    /** The file object of the tmp picture file */
+    private File tmpPictureFile;
+
+    /** The Image object of the picture */
     private Image pictureImage;
-    // The type of the picture file, can usually be gif, jpg, jpeg, png and pdf
-    private String type;
-    // The original name of the picture file
-    private String originalName;
+
+    /** The type of the picture */
+    private String pictureType;
+
+    /** The name of the original picture file */
+    private String originalPictureName;
+
+    /** The name of the tmp picture */
+    private String tmpPictureName;
+
+    /** The name of the tmp picture without extension */
     private String realName;
-    // The size of the picture file, the unit is byte
-    private long size;
-    // The new name we generate randomly for the picture file
-    private String generateName;
-    // The location of the picture file
-    private String filePath;
-    // The width of the picture
+
+    /** The path of the original picture file */
+    private String originalPicturePath;
+
+    /** The path of the tmp picture file */
+    private String tmpPicturePath;
+
+    /** The width of the picture */
     private int width = 0;
-    // The height of the picture
+
+    /** The height of the picture */
     private int height = 0;
-    // A random key for the picture file
-    private long imageKey = 0;
-    // The location of the tmp folder
-//    protected static final String TMP_DIR = "/usr/local/nginx/html/signichat/tmp/";
-    protected static final String TMP_DIR = "/app-data/ljy/tmp/";
-//    protected static final String IMAGE_DATA_DIR = "/usr/local/nginx/html/signichat/data/";
-    protected static final String IMAGE_DATA_DIR = "/app-data/ljy/data/";
-    // The prefix of the preview image
-    protected static final String IMAGE_PREVIEW_PREFIX = "preview_";
 
-    private int desBigWidth = 452;
-    private int desBigHeight = 300;
-    private int desMiddleWidth = 452;
-    private int desMiddleHeight = 148;
-    private int desSmallWidth = 80;
-    private int desSmallHeight = 80;
-    private int des120Width = 120;
-    private int des120Height = 120;
-    private int des150Width = 150;
-    private int des150Height = 150;
-    private int des1000Width = 1000;
-    private int des1000Height = 1000;
+    /** The picture ID generating randomly and uniquely */
+    private long pictureID;
 
-    private String pdfTargetUrl = IMAGE_DATA_DIR + "pdf/";
-    private String jpgTargetUrl = IMAGE_DATA_DIR + "jpg/";
-    private String dziTargetUrl = IMAGE_DATA_DIR + "dzi/";
+    /** Construct function */
+    public Picture(File inputPictureFile) {
+        try {
+            originalPictureFile = inputPictureFile;
+            originalPictureName = originalPictureFile.getName();
+            originalPicturePath = originalPictureFile.getAbsolutePath();
+            pictureType = originalPictureName.substring(originalPictureName.lastIndexOf('.') + 1, originalPictureName.length());
 
+            tmpPictureName = generateTmpPictureName();
+            realName = tmpPictureName.substring(0, tmpPictureName.lastIndexOf('.') - 1);
+            tmpPictureFile = new File(jpgTargetUrl + Upload.adminID + '/' + realName);
 
-    // The construct function of the Picture class
-    public Picture(File picture) throws IOException{
-        pictureFile = picture;
-        originalName = pictureFile.getName();
-        type = originalName.substring(originalName.lastIndexOf('.') + 1, originalName.length());
-        size = pictureFile.getTotalSpace();
-        generateFileName();
-        filePath = pictureFile.getAbsolutePath();
-        pictureImage = ImageIO.read(picture);
-        width = pictureImage.getWidth(null);
-        height = pictureImage.getHeight(null);
-        realName = generateName.substring(0, generateName.lastIndexOf('.') - 1);
-        tmpFile = new File(TMP_DIR + generateName);
-        copyPicture();
-        parseImage();
-        image2dzi();
+            pictureImage = ImageIO.read(originalPictureFile);
+            width = pictureImage.getWidth(null);
+            height = pictureImage.getHeight(null);
+
+            generateTmpPictureFile();
+            generateDziFile();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("ERROR: Picture.Picture");
+        }
     }
 
-    public String getGenerateName() {
-        return this.generateName;
-    }
-
-    public String getRealName() { return this.realName; }
-
-    public String getOriginalName() { return this.originalName; }
-
-    public File getPictureFile() {
-        return this.pictureFile;
-    }
-
-    public int getWidth() {
-        return this.width;
-    }
-
-    public int getHeight() {
-        return this.height;
-    }
-
-    // We use this function to create a folder named tmp if it does not exist
-    private void createTmpFolder() throws IOException {
-        File tmpDir = new File(TMP_DIR);
-        File commentImageDir = new File(TMP_DIR + "comment_image/");
+    /** Create the directory of tmp */
+    private void createTmpDirectory() {
+        File tmpDir = new File(PICTURE_TMP_DIR);
         if (!tmpDir.exists()) {
             tmpDir.mkdir();
         }
-        if (!commentImageDir.exists()) {
-            commentImageDir.mkdir();
-        }
     }
 
-    private void createDataFolder() throws IOException {
-        File dataDir = new File(IMAGE_DATA_DIR);
-        File pdfTargetDir = new File(pdfTargetUrl);
-        File jpgTargetDir = new File(jpgTargetUrl);
-        File dziTargetDir = new File(dziTargetUrl);
-        File userIdDir = new File(jpgTargetUrl + UpLoad.adminId);
+    /** Create the directory of data */
+    private void createDataDirectory() {
+        File dataDir = new File(PICTURE_DATA_DIR);
         if (!dataDir.exists()) {
             dataDir.mkdir();
         }
-        if (!pdfTargetDir.exists()) {
-            pdfTargetDir.mkdir();
+
+        File jpgTargrtDir = new File(jpgTargetUrl);
+        if (!jpgTargrtDir.exists()) {
+            jpgTargrtDir.mkdir();
         }
-        if (!jpgTargetDir.exists()) {
-            jpgTargetDir.mkdir();
-        }
+
+        File dziTargetDir = new File(dziTargetUrl);
         if (!dziTargetDir.exists()) {
             dziTargetDir.mkdir();
         }
-        if (!userIdDir.exists()) {
-            userIdDir.mkdir();
+
+        File userIDDir = new File(jpgTargetUrl + Upload.adminID);
+        if (!userIDDir.exists()) {
+            userIDDir.mkdir();
         }
     }
 
-    // Rename the picture file randomly
-    private void generateFileName() {
-        // Create 13 random numbers according to the time
+    /** Generate the name of tmp picture file randomly and uniquely */
+    private String generateTmpPictureName() {
         long currentTime = System.currentTimeMillis();
         String prefix = String.valueOf(currentTime);
-        // Create 8 random numbers
         int randomNum = (int)Math.floor(Math.random() * 100_000_000);
         String suffix = String.valueOf(randomNum);
-        // The new name of the picture file is combinated by 21 numbers
-        generateName = prefix + suffix + '.' + type;
+        return prefix + suffix + '.' + pictureType;
     }
 
-    // We use this function to copy picture files from original folder to the tmp folder
-    // @return operation success true, else false
-    public void copyPicture() throws IOException{
-        createTmpFolder();
-        if (pictureFile.exists() && pictureFile.isFile()) {
-            File destFile = new File(TMP_DIR + generateName);
+    /** Generate the tmp picture file in tmp directory */
+    private void generateTmpPictureFile() {
+        createDataDirectory();
 
-            FileInputStream FileIn = null;
-            FileOutputStream FileOut = null;
-            FileChannel in = null;
-            FileChannel out = null;
+        if (originalPictureFile.exists() && originalPictureFile.isFile()) {
+            FileInputStream fileInputStream = null;
+            FileOutputStream fileOutputStream = null;
+            FileChannel channelIn = null;
+            FileChannel channelOut = null;
 
             try {
-                FileIn = new FileInputStream(pictureFile);
-                FileOut = new FileOutputStream(destFile);
-                in = FileIn.getChannel();
-                out = FileOut.getChannel();
-                in.transferTo(0, in.size(), out);
+                fileInputStream = new FileInputStream(originalPictureFile);
+                fileOutputStream = new FileOutputStream(tmpPictureFile);
+                channelIn = fileInputStream.getChannel();
+                channelOut = fileOutputStream.getChannel();
+                channelIn.transferTo(0, channelIn.size(), channelOut);
+            } catch (FileNotFoundException fnf) {
+                fnf.printStackTrace();
+                System.out.println("ERROR: Picture.generateTmpPictureFile");
             } catch (IOException e) {
                 e.printStackTrace();
+                System.out.println("ERROR: Picture.generateTmpPictureFile");
             } finally {
                 try {
-                    FileIn.close();
-                    FileOut.close();
-                    in.close();
-                    out.close();
+                    fileInputStream.close();
+                    fileOutputStream.close();
+                    channelIn.close();
+                    channelOut.close();
                 } catch (IOException e) {
                     e.printStackTrace();
+                    System.out.println("ERROR: Picture.generateTmpPictureFile");
                 }
             }
+        } else {
+            System.out.println("The original picture file " + originalPictureName +
+            " is not a file or does not exist");
+            System.exit(1);
         }
     }
 
-    // Parse the picture to create the preview images
-    public void parseImage() throws IOException {
-        String previewImageName = IMAGE_PREVIEW_PREFIX + generateName;
-        File target = new File(TMP_DIR + previewImageName);
-        int dest_height = 120;
-        int dest_width = 120;
-        resize(dest_width, dest_height, target);
-        imageKey = System.currentTimeMillis() * 10;
+    /** Help function to resize the picture*/
+    private void resizePicture(int width, int height, File destination) {
+        try {
+            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            image.getGraphics().drawImage(pictureImage, 0, 0, width, height, null);
+            FileOutputStream fileOutputStream = new FileOutputStream(destination);
+            JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(fileOutputStream);
+            encoder.encode(image);
+        } catch (FileNotFoundException fnf) {
+            fnf.printStackTrace();
+            System.out.println("ERROR: Picture.resizePicture");
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("ERROR: Picture.resizePicture");
+        }
     }
 
-    public void resizeImage() throws IOException {
+    /** Generate the dzi file */
+    private void generateDziFile() {
+        try {
+            String source = PICTURE_DATA_DIR + "jpg/" + Upload.adminID + '/' + realName;
+            String destination = dziTargetUrl + realName;
+
+            String cmdDziTransform = "/usr/local/vips/bin/vips dzsave " + source + " " + destination + " --suffix .png";
+            Runtime.getRuntime().exec(cmdDziTransform);
+
+            File dziFile = new File(dziTargetUrl + realName + ".dzi");
+            File jsFile = new File(dziTargetUrl + realName + ".js");
+
+            // Block when dzi file has not generated
+            while (!dziFile.exists());
+
+            FileInputStream fileInputStream = new FileInputStream(dziFile);
+            FileOutputStream fileOutputStream = new FileOutputStream(jsFile);
+            FileChannel channelIn = fileInputStream.getChannel();
+            FileChannel channelOut = fileOutputStream.getChannel();
+
+            channelIn.transferTo(0, channelIn.size(), channelOut);
+
+            fileInputStream.close();
+            fileOutputStream.close();
+            channelIn.close();
+            channelOut.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("ERROR: Picture.generateDziFile");
+        }
+    }
+
+    /** Generate different size of pictures using in the website */
+    private void generateDifferentSizePicture() {
+        File bigPicFile = new File(jpgTargetUrl + Upload.adminID + '/' + realName + "?imageView2_1_w_452_h_300");
+        File middlePicFile = new File(jpgTargetUrl + Upload.adminID + '/' + realName + "?imageView2_1_w_452_h_148");
+        File smallPicFile = new File(jpgTargetUrl + Upload.adminID + '/' + realName + "?imageView2_1_w_80_h_80");
+        File picFile120 = new File(jpgTargetUrl + Upload.adminID + '/' + realName + "?imageView2_1_w_120_h_120");
+        File picFile150 = new File(jpgTargetUrl + Upload.adminID + '/' + realName + "?imageView2_1_w_150_h_150");
+        File picFile1000 = new File(jpgTargetUrl + Upload.adminID + '/' + realName + "?imageView2_1_w_1000_h_1000");
+
         if (width > height) {
-            des1000Height = 1000 * height / width;
+            resizePicture(1000, 1000 * height / width, picFile1000);
         } else {
-            des1000Width = 1000 * width / height;
+            resizePicture(1000 * width / height, 1000, picFile1000);
         }
-        File bigPicFile = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName + "?imageView2_1_w_452_h_300");
-        File middlePicFile = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName + "?imageView2_1_w_452_h_148");
-        File smallPicFile = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName + "?imageView2_1_w_80_h_80");
-        File picFile120 = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName + "?imageView2_1_w_120_h_120");
-        File picFile150 = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName + "?imageView2_1_w_150_h_150");
-        File picFile1000 = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName + "?imageView2_1_w_1000_h_1000");
-        resize(desBigWidth, desBigHeight, bigPicFile);
-        resize(desMiddleWidth, desMiddleHeight, middlePicFile);
-        resize(desSmallWidth, desSmallHeight, smallPicFile);
-        resize(des120Width, des120Height, picFile120);
-        resize(des150Width, des150Height, picFile150);
-        resize(des1000Width, des1000Height, picFile1000);
+
+        resizePicture(452, 400, bigPicFile);
+        resizePicture(452, 148, middlePicFile);
+        resizePicture(80, 80, smallPicFile);
+        resizePicture(120, 120, picFile120);
+        resizePicture(150, 150, picFile150);
+
     }
 
-    private void resize(int width, int height, File target) throws IOException {
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        image.getGraphics().drawImage(pictureImage, 0, 0, width, height, null);
-        FileOutputStream out = new FileOutputStream(target);
-        JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
-        encoder.encode(image);
-        out.close();
-    }
+    /** Upload all kinds of picture files to AWS S3 database */
+    public boolean uploadPicture() {
+        createDataDirectory();
+        generateDifferentSizePicture();
 
-    // Convert the picture file to dzi format
-    public void image2dzi() throws IOException {
-        String source = TMP_DIR + generateName;
-        String target = TMP_DIR + realName;
-        String cmdDziTransform = "/usr/local/vips/bin/vips dzsave " + source + " " + target + " --suffix .png";
-        Runtime.getRuntime().exec(cmdDziTransform);
-        File dziFile = new File(TMP_DIR + realName + ".dzi");
-        File jsFile = new File(TMP_DIR + realName + ".js");
-
-        while (!dziFile.exists());
-        FileInputStream FileIn = new FileInputStream(dziFile);
-        FileOutputStream FileOut = new FileOutputStream(jsFile);
-        FileChannel in = FileIn.getChannel();
-        FileChannel out = FileOut.getChannel();
-
-        in.transferTo(0, in.size(), out);
-
-        FileIn.close();
-        FileOut.close();
-        in.close();
-        out.close();
-    }
-
-    public void rename() throws IOException {
-        File newName = new File(jpgTargetUrl + UpLoad.adminId + '/' + realName);
-        tmpFile.renameTo(newName);
-        File dziFile = new File(TMP_DIR + realName + ".dzi");
-        newName = new File(dziTargetUrl + realName + ".dzi");
-        dziFile.renameTo(newName);
-        File jsFile = new File(TMP_DIR + realName + ".js");
-        newName = new File(dziTargetUrl + realName + ".js");
-        jsFile.renameTo(newName);
-        File filesFile = new File(TMP_DIR + realName + "_files/");
-        newName = new File(dziTargetUrl + realName + "_files/");
-        filesFile.renameTo(newName);
-        File tmpDir = new File(TMP_DIR);
-    }
-
-    public boolean uploadImage() throws IOException, InterruptedException {
-        createDataFolder();
-        resizeImage();
-        rename();
-        File s3headerFile = new File(dziTargetUrl + realName + "_files/");
-        if (s3headerFile.isDirectory()) {
-            UpLoad.s3Database.S3UploadDir("data/dzi/" + realName + "_files/", s3headerFile);
-            UpLoad.s3Database.S3UploadFile("data/dzi/" + realName + ".dzi", new File(dziTargetUrl + realName + ".dzi"));
-            UpLoad.s3Database.S3UploadFile("data/dzi/" + realName + ".js", new File(dziTargetUrl + realName + ".js"));
+        File s3HeaderFile = new File(dziTargetUrl +  realName + "_files/");
+        if (s3HeaderFile.isDirectory()) {
+            Upload.s3Transfer.S3UploadDir("data/dzi/" + realName + "_files/", s3HeaderFile);
+            Upload.s3Transfer.S3UploadFile("data/dzi/" + realName + ".dzi", new File(dziTargetUrl + realName + ".dzi"));
+            Upload.s3Transfer.S3UploadFile("data/dzi/" + realName + ".js", new File(dziTargetUrl + realName + ".js"));
             return true;
         } else {
             return false;
         }
     }
 
-    public static boolean deleteFile(File file) throws IOException {
-        boolean flag = false;
-        if (file.exists() && file.isFile()) {
-            file.delete();
-            flag = true;
-        }
-        return flag;
-    }
+    public String getOriginalPictureName() { return originalPictureName; }
 
-    public static boolean deleteDir(File file) throws IOException {
-        boolean flag = true;
-        if (!file.exists() || !file.isDirectory()) {
-            return false;
-        }
+    public String getRealName() { return realName; }
 
-        File[] files = file.listFiles();
-        for (int i = 0; i < files.length; i++) {
-            if (files[i].isFile()) {
-                flag = deleteFile(files[i]);
-                if (!flag) {
-                    break;
-                }
-            } else {
-                flag = deleteDir(files[i]);
-                if (!flag) {
-                    break;
-                }
-            }
-        }
-        if (!flag) return false;
-        if (file.delete()) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+    public int getWidth() { return width; }
+
+    public int getHeight() { return height; }
 }
